@@ -59,6 +59,10 @@ h3 {
     font-size: 1.35rem;
 }
 
+h3.center {
+    text-align: center;
+}
+
 /*.primary {*/
 /*    color: #42b983;*/
 /*}*/

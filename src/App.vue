@@ -1,9 +1,9 @@
 <template>
   <div class="container column">
-    <form class="card card-w30">
+    <form class="card card-w30" @submit.prevent="submitForm">
       <div class="form-control">
         <label for="type">Тип блока</label>
-        <select id="type">
+        <select id="type" v-model="title">
           <option value="title">Заголовок</option>
           <option value="subtitle">Подзаголовок</option>
           <option value="avatar">Аватар</option>
@@ -13,35 +13,22 @@
 
       <div class="form-control">
         <label for="value">Значение</label>
-        <textarea id="value" rows="3"></textarea>
+        <textarea id="value" rows="3" v-model="text"></textarea>
       </div>
 
-      <button class="btn primary">Добавить</button>
+      <button class="btn primary" :disabled="!isValidText">Добавить</button>
     </form>
 
     <div class="card card-w70">
-      <h1>Резюме Nickname</h1>
-      <div class="avatar">
-        <img
-          src="https://cdn.dribbble.com/users/5592443/screenshots/14279501/drbl_pop_r_m_rick_4x.png"
-        />
+      <div v-if="anyFormField">
+        <h1 v-show="form.title">{{ form.title }}</h1>
+        <div class="avatar" v-show="form.avatar">
+          <img :src="form.avatar" alt="avatar image" />
+        </div>
+        <h2 v-show="form.subtitle">{{ form.subtitle }}</h2>
+        <p v-show="form.text">{{ form.text }}</p>
       </div>
-      <h2>Опыт работы</h2>
-      <p>
-        главный герой американского мультсериала «Рик и Морти», гениальный
-        учёный, изобретатель, атеист (хотя в некоторых сериях он даже молится
-        Богу, однако, каждый раз после чудесного спасения ссылается на удачу и
-        вновь отвергает его существование), алкоголик, социопат, дедушка Морти.
-        На момент начала третьего сезона ему 70 лет[1]. Рик боится пиратов, а
-        его главной слабостью является некий - "Санчезиум". Исходя из того, что
-        существует неограниченное количество вселенных, существует
-        неограниченное количество Риков, герой сериала предположительно
-        принадлежит к измерению С-137. В серии комикcов Рик относится к
-        измерению C-132, а в игре «Pocket Mortys» — к измерению C-123[2].
-        Прототипом Рика Санчеза является Эмметт Браун, герой кинотрилогии «Назад
-        в будущее»[3].
-      </p>
-      <h3>Добавьте первый блок, чтобы увидеть результат</h3>
+      <h3 v-else class="center">Добавьте первый блок, чтобы увидеть результат</h3>
     </div>
   </div>
   <div class="container">
@@ -67,8 +54,75 @@
 </template>
 
 <script lang="ts">
-import { defineConmonent } from "vue";
-export default defineConmonent({});
+import { computed, defineComponent, ref, onMounted } from "vue";
+import axios from "axios";
+
+type Titles = "title" | "subtitle" | "avatar" | "text";
+interface Form {
+  title: string;
+  avatar: string;
+  text: string;
+  subtitle: string;
+}
+
+export default defineComponent({
+  setup() {
+    const urlData = {
+      urlComments: "https://jsonplaceholder.typicode.com/comments?_limit=42",
+      urlDB: "https://vue3-work-with-db-default-rtdb.firebaseio.com/",
+      nameDB: "resume",
+      format: "json"
+    };
+
+    const title = ref<Titles>("title");
+    const text = ref<string>("");
+    const form = ref<Form>({
+      title: "",
+      avatar: "",
+      text: "",
+      subtitle: ""
+    });
+    const isValidText = computed(() => text.value.length > 3);
+    const anyFormField = computed(() => {
+      const val: Form = form.value;
+      return val.avatar || val.subtitle || val.title || val.text;
+    });
+
+    const sendForm = async () => {
+      if (title.value && isValidText) {
+        console.log("Send:", form.value);
+        form.value[title.value] = text.value;
+        const { data } = await axios.patch(
+          `${urlData.urlDB}${urlData.nameDB}.${urlData.format}`,
+          form.value
+        );
+        console.log(data);
+      }
+    };
+
+    const submitForm = () => {
+      if (title.value && isValidText) {
+        sendForm();
+      }
+    };
+    const getResume = async () => {
+      const { data } = await axios.get(
+        `${urlData.urlDB}${urlData.nameDB}.${urlData.format}`
+      );
+      if (data) {
+        form.value = data;
+        console.log("After get: ", form.value);
+      }
+    };
+
+    onMounted(() => {
+      console.log("Form: ", form.value);
+      getResume();
+    });
+
+    return { form, text, title, isValidText, anyFormField, submitForm };
+  }
+});
 </script>
 
 <style>
