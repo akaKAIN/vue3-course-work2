@@ -28,44 +28,38 @@
         <h2 v-show="form.subtitle">{{ form.subtitle }}</h2>
         <p v-show="form.text">{{ form.text }}</p>
       </div>
-      <h3 v-else class="center">Добавьте первый блок, чтобы увидеть результат</h3>
+      <h3 v-else class="center">
+        Добавьте первый блок, чтобы увидеть результат
+      </h3>
     </div>
   </div>
+
   <div class="container">
     <p>
-      <button class="btn primary">Загрузить комментарии</button>
+      <button class="btn primary" @click="loadComments">Загрузить комментарии</button>
     </p>
-    <div class="card">
-      <h2>Комментарии</h2>
-      <ul class="list">
-        <li class="list-item">
-          <div>
-            <p><strong>test@microsoft.com</strong></p>
-            <small
-              >Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-              Eligendi, reiciendis.</small
-            >
-          </div>
-        </li>
-      </ul>
-    </div>
-    <div class="loader"></div>
+    <app-comment-list :comments="comments">
+      <app-comment
+        v-for="comment in comments"
+        :key="comment.id"
+        :email="comment.email"
+        :text="comment.body"
+      ></app-comment>
+    </app-comment-list>
+
+    <div class="loader" v-if="isLoading"></div>
   </div>
 </template>
 
 <script lang="ts">
 import { computed, defineComponent, ref, onMounted } from "vue";
 import axios from "axios";
-
-type Titles = "title" | "subtitle" | "avatar" | "text";
-interface Form {
-  title: string;
-  avatar: string;
-  text: string;
-  subtitle: string;
-}
+import { Form, Titles, Comment } from "@/models/base.model";
+import AppComment from "@/Components/AppComment.vue";
+import AppCommentList from "@/Components/AppCommentList.vue";
 
 export default defineComponent({
+  components: {AppCommentList, AppComment },
   setup() {
     const urlData = {
       urlComments: "https://jsonplaceholder.typicode.com/comments?_limit=42",
@@ -82,6 +76,8 @@ export default defineComponent({
       text: "",
       subtitle: ""
     });
+    const comments = ref<Comment[]>([]);
+    const isLoading = ref<boolean>(false);
     const isValidText = computed(() => text.value.length > 3);
     const anyFormField = computed(() => {
       const val: Form = form.value;
@@ -90,13 +86,12 @@ export default defineComponent({
 
     const sendForm = async () => {
       if (title.value && isValidText) {
-        console.log("Send:", form.value);
         form.value[title.value] = text.value;
-        const { data } = await axios.patch(
+
+        await axios.patch(
           `${urlData.urlDB}${urlData.nameDB}.${urlData.format}`,
           form.value
         );
-        console.log(data);
       }
     };
 
@@ -111,16 +106,32 @@ export default defineComponent({
       );
       if (data) {
         form.value = data;
-        console.log("After get: ", form.value);
       }
     };
 
+    const loadComments = async () => {
+      isLoading.value = true;
+      const { data } = await axios.get(urlData.urlComments);
+      console.log(data);
+      isLoading.value = false;
+      comments.value = data;
+    };
+
     onMounted(() => {
-      console.log("Form: ", form.value);
       getResume();
     });
 
-    return { form, text, title, isValidText, anyFormField, submitForm };
+    return {
+      form,
+      text,
+      title,
+      isValidText,
+      anyFormField,
+      comments,
+      isLoading,
+      submitForm,
+      loadComments
+    };
   }
 });
 </script>
