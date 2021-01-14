@@ -19,6 +19,7 @@
       <button class="btn primary" :disabled="!isValidText">Добавить</button>
     </form>
 
+    <!-- TODO: component-->
     <div class="card card-w70">
       <div v-if="anyFormField">
         <h1 v-show="form.title">{{ form.title }}</h1>
@@ -34,9 +35,12 @@
     </div>
   </div>
 
+  <!--  TODO: component-->
   <div class="container">
     <p>
-      <button class="btn primary" @click="loadComments">Загрузить комментарии</button>
+      <button class="btn primary" @click="loadComments">
+        Загрузить комментарии
+      </button>
     </p>
     <app-comment-list :comments="comments">
       <app-comment
@@ -54,12 +58,12 @@
 <script lang="ts">
 import { computed, defineComponent, ref, onMounted } from "vue";
 import axios from "axios";
-import { Form, Titles, Comment } from "@/models/base.model";
+import { ResumeForm, Titles, Comment } from "@/models/base.model";
 import AppComment from "@/Components/AppComment.vue";
 import AppCommentList from "@/Components/AppCommentList.vue";
 
 export default defineComponent({
-  components: {AppCommentList, AppComment },
+  components: { AppCommentList, AppComment },
   setup() {
     const urlData = {
       urlComments: "https://jsonplaceholder.typicode.com/comments?_limit=42",
@@ -70,17 +74,18 @@ export default defineComponent({
 
     const title = ref<Titles>("title");
     const text = ref<string>("");
-    const form = ref<Form>({
+    const comments = ref<Comment[]>([]);
+    const isLoading = ref<boolean>(false);
+    const form = ref<ResumeForm>({
       title: "",
       avatar: "",
       text: "",
       subtitle: ""
     });
-    const comments = ref<Comment[]>([]);
-    const isLoading = ref<boolean>(false);
+
     const isValidText = computed(() => text.value.length > 3);
     const anyFormField = computed(() => {
-      const val: Form = form.value;
+      const val: ResumeForm = form.value;
       return val.avatar || val.subtitle || val.title || val.text;
     });
 
@@ -88,10 +93,13 @@ export default defineComponent({
       if (title.value && isValidText) {
         form.value[title.value] = text.value;
 
-        await axios.patch(
+        const response = await axios.patch(
           `${urlData.urlDB}${urlData.nameDB}.${urlData.format}`,
           form.value
         );
+        if (response.status === 200) {
+          text.value = "";
+        }
       }
     };
 

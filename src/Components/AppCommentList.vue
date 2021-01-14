@@ -8,15 +8,13 @@
 </template>
 
 <script lang="ts">
-import { Comment } from "../models/base.model";
 export default {
   name: "AppCommentList",
   props: {
     comments: {
-      type: Array<Comment>,
-      default:
+      type: Array,
+      default: () => []
     }
   }
 };
 </script>
-

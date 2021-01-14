@@ -1,10 +1,13 @@
-export type Titles = keyof Form;
+export type Titles = keyof ResumeForm;
 
-export interface Form {
+export interface ResumeForm extends ResumeOption {
   title: string;
   avatar: string;
-  text: string;
+}
+
+export interface ResumeOption {
   subtitle: string;
+  text: string;
 }
 
 export interface Comment {
