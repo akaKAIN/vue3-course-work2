@@ -1,23 +1,6 @@
 <template>
   <div class="container column">
-    <form class="card card-w30">
-      <div class="form-control">
-        <label for="type">Тип блока</label>
-        <select id="type">
-          <option value="title">Заголовок</option>
-          <option value="subtitle">Подзаголовок</option>
-          <option value="avatar">Аватар</option>
-          <option value="text">Текст</option>
-        </select>
-      </div>
-
-      <div class="form-control">
-        <label for="value">Значение</label>
-        <textarea id="value" rows="3"></textarea>
-      </div>
-
-      <button class="btn primary">Добавить</button>
-    </form>
+    <input-form @get-form="addInput"></input-form>
 
     <div class="card card-w70">
       <h1>Резюме Nickname</h1>
@@ -67,8 +50,20 @@
 </template>
 
 <script lang="ts">
-import { defineConmonent } from "vue";
-export default defineConmonent({});
+import { defineComponent } from "vue";
+import InputForm from "@/components/InputForm.vue";
+import { InputObject } from "@/models/base";
+
+export default defineComponent({
+  components: { InputForm },
+  setup() {
+    const addInput = (inputObj: InputObject) => {
+      console.log(inputObj);
+    };
+
+    return { addInput };
+  }
+});
 </script>
 
 <style>
