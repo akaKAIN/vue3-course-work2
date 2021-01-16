@@ -72,8 +72,8 @@ export default defineComponent({
         case "text":
           resumeOption.value.text = inputObj.text;
           break;
-        default:
-          throw new Error("Error switch");
+        // default:
+        //   throw new Error("Error switch");
       }
       if (resumeOption.value.title.length && resumeOption.value.text.length) {
         form.value.options.push(Object.assign({}, resumeOption.value));
