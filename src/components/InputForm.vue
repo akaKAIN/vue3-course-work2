@@ -3,11 +3,7 @@
     <div class="form-control">
       <label for="type">Тип блока</label>
       <select id="type" v-model="title">
-        <option
-          v-for="titleKey in Object.keys(titles)"
-          :value="titleKey"
-          :key="titleKey"
-        >
+        <option v-for="titleKey in titleKeys" :value="titleKey" :key="titleKey">
           {{ titles[titleKey] }}
         </option>
       </select>
@@ -30,6 +26,7 @@ import { ResumeForm, Title } from "@/models/base";
 export default {
   name: "InputForm",
   emits: ["get-form"],
+  // Тут хз какой тип у emit :(((
   setup(props: {}, { emit }: { emit: any }) {
     const titles: ResumeForm = {
       title: "Заголовок",
@@ -40,13 +37,18 @@ export default {
     const title = ref<Title>("title");
     const text = ref<string>("");
 
-    const isDisabled = computed(() => text.value.length < 4);
-    const resetForm = () => (text.value = "");
-    const returnForm = () =>
-      !isDisabled.value &&
-      emit("get-form", { title: title.value, text: text.value });
+    const titleKeys = computed(() => Object.keys(titles));
+    const isDisabled = computed(() => text.value.trim().length < 4);
 
-    return { titles, title, text, isDisabled, resetForm, returnForm };
+    const clearText = () => (text.value = "");
+    const returnForm = () => {
+      if (!isDisabled.value) {
+        emit("get-form", { title: title.value, text: text.value });
+        clearText();
+      }
+    };
+
+    return { titles, title, text, titleKeys, isDisabled, returnForm };
   }
 };
 </script>
