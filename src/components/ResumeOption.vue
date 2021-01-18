@@ -1,6 +1,6 @@
 <template>
-  <h2>{{ title }}</h2>
-  <p>{{ text }}</p>
+  <h2 v-show="title">{{ title }}</h2>
+  <p v-show="text">{{ text }}</p>
 </template>
 
 <script>
@@ -9,11 +9,11 @@ export default {
   props: {
     title: {
       type: String,
-      required: true
+      default: ""
     },
     text: {
       type: String,
-      required: true
+      default: ""
     }
   }
 };
