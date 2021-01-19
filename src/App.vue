@@ -31,10 +31,6 @@
           :title="item.title"
           :text="item.text"
         ></resume-option>
-        <resume-option
-          :title="resumeOption.title"
-          :text="resumeOption.text"
-        ></resume-option>
       </template>
     </app-resume>
   </div>
@@ -72,56 +68,80 @@ export default defineComponent({
     const notification = ref<string>("");
     const error = ref<string>("");
 
-    const hideError = () => setTimeout(() => (error.value = ""), 3000);
-    const hideNotification = () =>
-      setTimeout(() => (notification.value = ""), 3000);
-    const showError = (text: string) => {
+    const hideError = (timeout: number) =>
+      setTimeout(() => (error.value = ""), timeout);
+    const hideNotification = (timeout: number) =>
+      setTimeout(() => (notification.value = ""), timeout);
+    const showError = (text: string, timeout: number) => {
       error.value = text;
-      hideError();
+      hideError(timeout);
     };
-    const showNotification = (text: string) => {
+    const showNotification = (text: string, timeout: number) => {
       notification.value = text;
-      hideNotification();
+      hideNotification(timeout);
     };
 
+    // Отправка данных формы в БД с заменой значений на тукущие.
     const updateResume = (data: Resume) => {
       ApiService.patchResume(data);
     };
 
+    // Проверка, что конечный объект массива формы еще не до конца заполнен.
+    const isLastOptionFull = (): boolean => {
+      if (!form.value.options.length) {
+        return true;
+      } else {
+        const lastIdx: number = form.value.options.length - 1;
+        return !!(
+          form.value.options[lastIdx].title && form.value.options[lastIdx].text
+        );
+      }
+    };
+
+    // Обновление последнего элемента массива формы
+    const updateLastOption = (inputObj: InputObject) => {
+      if (inputObj.title === "subtitle") {
+        form.value.options[form.value.options.length - 1].title = inputObj.text;
+      } else if (inputObj.title === "text") {
+        form.value.options[form.value.options.length - 1].text = inputObj.text;
+      } else {
+        showError(
+          `Update error for ${inputObj.title} with value ${inputObj.text}`,
+          4000
+        );
+      }
+      showNotification(
+        `${form.value.options[form.value.options.length - 1].title ||
+          form.value.options[form.value.options.length - 1]
+            .text} was added in ${inputObj.title}`,
+        3000
+      );
+    };
+
+    // Добавление пустого объекта {ResumeOptionItem} в список формы
+    const addNewEmptyOption = () => {
+      console.log("create new option");
+      form.value.options.push({ title: "", text: "" });
+    };
+
     /**
      * Добавление значений выбираемых и вводимых пользователем.
-     * Если вводимые данные относятся к "опциям резюме" (subtitle || text),
-     * то данные добавляются в промежуточный объект (resumeOptions).
-     * Как только он заполнится, его значения добавляются в массив итоговой формы показа
      * @param inputObj {InputObject} - объект значний выбразых пользователем
      */
-    const addInput = (inputObj: InputObject): void => {
-      switch (inputObj.title) {
-        case "avatar":
-          form.value[inputObj.title] = inputObj.text;
-          showNotification(inputObj.text + " was added");
-          updateResume(form.value);
-          break;
-        case "title":
-          form.value[inputObj.title] = inputObj.text;
-          showNotification(inputObj.text + " was added");
-          updateResume(form.value);
-          break;
-        case "subtitle":
-          resumeOption.value.title = inputObj.text;
-          break;
-        case "text":
-          resumeOption.value.text = inputObj.text;
-          break;
-        default:
-          showError("Error of title key: " + inputObj.title);
+    const addInput = (inputObj: InputObject) => {
+      if (inputObj.title === "title" || inputObj.title === "avatar") {
+        form.value[inputObj.title] = inputObj.text;
+        showNotification(
+          `"${form.value[inputObj.title]}" was added to ${inputObj.title}`,
+          3000
+        );
+      } else if (inputObj.title === "subtitle" || inputObj.title === "text") {
+        isLastOptionFull() && addNewEmptyOption();
+        updateLastOption(inputObj);
+      } else {
+        showError(`Can't added ${inputObj.text} in ${inputObj.title}`, 4000);
       }
-      if (resumeOption.value.title.length && resumeOption.value.text.length) {
-        form.value.options.push(Object.assign({}, resumeOption.value));
-        updateResume(form.value);
-        resumeOption.value.title = "";
-        resumeOption.value.text = "";
-      }
+      updateResume(form.value);
     };
 
     const loadResume = async () => {
