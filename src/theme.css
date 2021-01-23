@@ -339,6 +339,11 @@ h3 {
     bottom: 0;
     right: 0;
 }
+
+.no-notification {
+    margin-top: 84px;
+}
+
 @-webkit-keyframes load3 {
     0% {
         -webkit-transform: rotate(0deg);

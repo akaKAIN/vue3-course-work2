@@ -1,85 +1,173 @@
 <template>
-  <div class="container column">
-    <form class="card card-w30">
-      <div class="form-control">
-        <label for="type">Тип блока</label>
-        <select id="type">
-          <option value="title">Заголовок</option>
-          <option value="subtitle">Подзаголовок</option>
-          <option value="avatar">Аватар</option>
-          <option value="text">Текст</option>
-        </select>
-      </div>
+  <app-notification
+    v-show="error"
+    :text="error"
+    level="danger"
+  ></app-notification>
+  <app-notification
+    v-show="notification"
+    :text="notification"
+    level="primary"
+  ></app-notification>
+  <div
+    class="container column"
+    :class="{ 'no-notification': !error && !notification }"
+  >
+    <input-form @get-form="addInput"></input-form>
+    <app-resume>
+      <h3 v-if="resumeFields">Добавьте первый блок, чтобы увидеть результат</h3>
+      <template v-if="form.title" #title>
+        <resume-title :title="form.title"></resume-title>
+      </template>
 
-      <div class="form-control">
-        <label for="value">Значение</label>
-        <textarea id="value" rows="3"></textarea>
-      </div>
+      <template v-if="form.avatar" #avatar>
+        <resume-avatar :src="form.avatar"></resume-avatar>
+      </template>
 
-      <button class="btn primary">Добавить</button>
-    </form>
-
-    <div class="card card-w70">
-      <h1>Резюме Nickname</h1>
-      <div class="avatar">
-        <img
-          src="https://cdn.dribbble.com/users/5592443/screenshots/14279501/drbl_pop_r_m_rick_4x.png"
-        />
-      </div>
-      <h2>Опыт работы</h2>
-      <p>
-        главный герой американского мультсериала «Рик и Морти», гениальный
-        учёный, изобретатель, атеист (хотя в некоторых сериях он даже молится
-        Богу, однако, каждый раз после чудесного спасения ссылается на удачу и
-        вновь отвергает его существование), алкоголик, социопат, дедушка Морти.
-        На момент начала третьего сезона ему 70 лет[1]. Рик боится пиратов, а
-        его главной слабостью является некий - "Санчезиум". Исходя из того, что
-        существует неограниченное количество вселенных, существует
-        неограниченное количество Риков, герой сериала предположительно
-        принадлежит к измерению С-137. В серии комикcов Рик относится к
-        измерению C-132, а в игре «Pocket Mortys» — к измерению C-123[2].
-        Прототипом Рика Санчеза является Эмметт Браун, герой кинотрилогии «Назад
-        в будущее»[3].
-      </p>
-      <h3>Добавьте первый блок, чтобы увидеть результат</h3>
-    </div>
+      <template #options>
+        <resume-option
+          v-for="item in form.options"
+          :key="item"
+          :title="item.title"
+          :text="item.text"
+        ></resume-option>
+      </template>
+    </app-resume>
   </div>
   <div class="container">
-    <p>
-      <button class="btn primary">Загрузить комментарии</button>
-    </p>
-    <div class="card">
-      <h2>Комментарии</h2>
-      <ul class="list">
-        <li class="list-item">
-          <div>
-            <p><strong>test@microsoft.com</strong></p>
-            <small
-              >Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-              Eligendi, reiciendis.</small
-            >
-          </div>
-        </li>
-      </ul>
-    </div>
-    <div class="loader"></div>
+    <app-comments></app-comments>
   </div>
 </template>
 
 <script lang="ts">
-import { defineConmonent } from "vue";
-export default defineConmonent({});
+import { computed, defineComponent, onMounted, ref } from "vue";
+import { InputObject, Resume, ResumeOptionItem } from "@/models/base";
+import AppResume from "@/components/AppResume.vue";
+import InputForm from "@/components/InputForm.vue";
+import ResumeTitle from "@/components/ResumeTitle.vue";
+import ResumeAvatar from "@/components/ResumeAvatar.vue";
+import ResumeOption from "@/components/ResumeOption.vue";
+import AppComments from "@/components/AppComments.vue";
+import ApiService from "@/services/ApiService";
+import { AxiosResponse } from "axios";
+import AppNotification from "@/components/AppNotification.vue";
+
+export default defineComponent({
+  components: {
+    AppNotification,
+    AppComments,
+    ResumeOption,
+    ResumeAvatar,
+    ResumeTitle,
+    AppResume,
+    InputForm
+  },
+  setup() {
+    const form = ref<Resume>({ title: "", avatar: "", options: [] });
+    const resumeOption = ref<ResumeOptionItem>({ title: "", text: "" });
+    const notification = ref<string>("");
+    const error = ref<string>("");
+
+    const hideError = (timeout: number) =>
+      setTimeout(() => (error.value = ""), timeout);
+    const hideNotification = (timeout: number) =>
+      setTimeout(() => (notification.value = ""), timeout);
+    const showError = (text: string, timeout: number) => {
+      error.value = text;
+      hideError(timeout);
+    };
+    const showNotification = (text: string, timeout: number) => {
+      notification.value = text;
+      hideNotification(timeout);
+    };
+
+    // Отправка данных формы в БД с заменой значений на тукущие.
+    const updateResume = (data: Resume) => {
+      ApiService.patchResume(data);
+    };
+
+    // Проверка, что конечный объект массива формы еще не до конца заполнен.
+    const isLastOptionFull = (): boolean => {
+      if (!form.value.options.length) {
+        return true;
+      } else {
+        const lastIdx: number = form.value.options.length - 1;
+        return !!(
+          form.value.options[lastIdx].title && form.value.options[lastIdx].text
+        );
+      }
+    };
+
+    // Обновление последнего элемента массива формы
+    const updateLastOption = (inputObj: InputObject) => {
+      if (inputObj.title === "subtitle") {
+        form.value.options[form.value.options.length - 1].title = inputObj.text;
+      } else if (inputObj.title === "text") {
+        form.value.options[form.value.options.length - 1].text = inputObj.text;
+      } else {
+        showError(
+          `Update error for ${inputObj.title} with value ${inputObj.text}`,
+          4000
+        );
+      }
+      showNotification(
+        `${form.value.options[form.value.options.length - 1].title ||
+          form.value.options[form.value.options.length - 1]
+            .text} was added in ${inputObj.title}`,
+        3000
+      );
+    };
+
+    // Добавление пустого объекта {ResumeOptionItem} в список формы
+    const addNewEmptyOption = () => {
+      console.log("create new option");
+      form.value.options.push({ title: "", text: "" });
+    };
+
+    /**
+     * Добавление значений выбираемых и вводимых пользователем.
+     * @param inputObj {InputObject} - объект значний выбразых пользователем
+     */
+    const addInput = (inputObj: InputObject) => {
+      if (inputObj.title === "title" || inputObj.title === "avatar") {
+        form.value[inputObj.title] = inputObj.text;
+        showNotification(
+          `"${form.value[inputObj.title]}" was added to ${inputObj.title}`,
+          3000
+        );
+      } else if (inputObj.title === "subtitle" || inputObj.title === "text") {
+        isLastOptionFull() && addNewEmptyOption();
+        updateLastOption(inputObj);
+      } else {
+        showError(`Can't added ${inputObj.text} in ${inputObj.title}`, 4000);
+      }
+      updateResume(form.value);
+    };
+
+    const loadResume = async () => {
+      const response: AxiosResponse = await ApiService.getResume();
+      if (response.status === 200 && response.data !== null) {
+        form.value = response.data;
+        if (response.data.options === undefined) {
+          form.value.options = [];
+        }
+      }
+    };
+
+    const resumeFields = computed(
+      () =>
+        !form.value.title && !form.value.avatar && !form.value.options.length
+    );
+    onMounted(() => loadResume());
+
+    return {
+      notification,
+      error,
+      form,
+      resumeOption,
+      resumeFields,
+      addInput
+    };
+  }
+});
 </script>
-
-<style>
-.avatar {
-  display: flex;
-  justify-content: center;
-}
-
-.avatar img {
-  width: 150px;
-  height: auto;
-  border-radius: 50%;
-}
-</style>
